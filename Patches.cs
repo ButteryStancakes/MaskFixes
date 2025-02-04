@@ -18,12 +18,6 @@ namespace MaskFixes
 
         static float localPlayerLastTeleported;
 
-        static LayerMask hideLayers = LayerMask.NameToLayer("Default") |
-                                      LayerMask.NameToLayer("Room") |
-                                      LayerMask.NameToLayer("Colliders") |
-                                      LayerMask.NameToLayer("PlaceableShipObject") |
-                                      LayerMask.NameToLayer("DecalStickableSurface");
-
         [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.Awake))]
         [HarmonyPostfix]
         static void StartOfRound_Post_Awake(StartOfRound __instance)
@@ -450,35 +444,109 @@ namespace MaskFixes
             if (!Plugin.configPatchHidingBehavior.Value)
                 return true;
 
-            for (int i = 0; i < StartOfRound.Instance.insideShipPositions.Length; i++)
+            NewMaskedAI.HideOnShip(__instance);
+            return false;
+        }
+
+        [HarmonyPatch(nameof(MaskedPlayerEnemy.DoAIInterval))]
+        [HarmonyPrefix]
+        static bool MaskedPlayerEnemy_Pre_DoAIInterval(MaskedPlayerEnemy __instance)
+        {
+            if (!Plugin.configPatchRoamingBehavior.Value)
+                return true;
+
+            if (__instance.isEnemyDead || __instance.currentBehaviourStateIndex != 0)
+                return true;
+
+            // base.DoAIInterval()
+            if (__instance.moveTowardsDestination)
+                __instance.agent.SetDestination(__instance.destination);
+            __instance.SyncPositionToClients();
+
+            // custom code is here
+            NewMaskedAI.Roam(__instance);
+
+            // end of MaskedPlayerEnemy.DoAIInterval()
+            if ((__instance.currentBehaviourStateIndex == 1 || __instance.currentBehaviourStateIndex == 2) && __instance.targetPlayer != null && __instance.PlayerIsTargetable(__instance.targetPlayer))
             {
-                if (Physics.Linecast(StartOfRound.Instance.shipDoorAudioSource.transform.position, StartOfRound.Instance.insideShipPositions[i].position, hideLayers, QueryTriggerInteraction.Ignore) && __instance.SetDestinationToPosition(StartOfRound.Instance.insideShipPositions[i].position, true))
+                if (__instance.lostPlayerInChase)
                 {
-                    __instance.shipHidingSpot = __instance.destination;
+                    __instance.movingTowardsTargetPlayer = false;
+                    if (!__instance.searchForPlayers.inProgress)
+                        __instance.StartSearch(__instance.transform.position, __instance.searchForPlayers);
+                }
+                else
+                {
+                    if (__instance.searchForPlayers.inProgress)
+                        __instance.StopSearch(__instance.searchForPlayers);
 
-                    bool spotIsNotTaken = true;
-                    foreach (EnemyAI enemyAI in RoundManager.Instance.SpawnedEnemies)
-                    {
-                        if (!enemyAI.isEnemyDead && enemyAI is MaskedPlayerEnemy maskedPlayerEnemy && __instance != maskedPlayerEnemy && maskedPlayerEnemy.currentBehaviourStateIndex == 2 && Vector3.Distance(__instance.shipHidingSpot, maskedPlayerEnemy.shipHidingSpot) < 1.75f)
-                        {
-                            spotIsNotTaken = false;
-                            Plugin.Logger.LogDebug($"Mimic #{__instance.GetInstanceID()}: Can't choose hiding spot #{i}, already claimed by mimic #{maskedPlayerEnemy.GetInstanceID()}");
-                            break;
-                        }
-                    }
-
-                    // stop checking other spots, this one is fine
-                    if (spotIsNotTaken)
-                    {
-                        Plugin.Logger.LogDebug($"Mimic #{__instance.GetInstanceID()}: Claimed hiding spot #{i} at coords {__instance.shipHidingSpot}");
-                        return false;
-                    }
+                    __instance.SetMovingTowardsTargetPlayer(__instance.targetPlayer);
                 }
             }
 
-            __instance.shipHidingSpot = StartOfRound.Instance.insideShipPositions[Random.Range(0, StartOfRound.Instance.insideShipPositions.Length)].position;
-            Plugin.Logger.LogDebug($"Mimic #{__instance.GetInstanceID()}: Fall back to position at coords {__instance.shipHidingSpot}");
             return false;
+        }
+
+        [HarmonyPatch(typeof(RoundManager), nameof(RoundManager.SpawnSyncedProps))]
+        [HarmonyPostfix]
+        static void RoundManager_Post_SpawnSyncedProps()
+        {
+            foreach (EntranceTeleport entranceTeleport in Object.FindObjectsByType<EntranceTeleport>(FindObjectsSortMode.None))
+            {
+                if (entranceTeleport.entranceId == 0)
+                {
+                    if (entranceTeleport.isEntranceToBuilding)
+                        NewMaskedAI.mainEntrancePointOutside = entranceTeleport.entrancePoint.position;
+                    else
+                        NewMaskedAI.mainEntrancePoint = entranceTeleport.entrancePoint.position;
+                }
+            }
+        }
+
+        [HarmonyPatch(typeof(RoundManager), nameof(RoundManager.GeneratedFloorPostProcessing))]
+        [HarmonyPostfix]
+        static void RoundManager_Post_GeneratedFloorPostProcessing(RoundManager __instance)
+        {
+            if (__instance.currentDungeonType != 4)
+                return;
+
+            Transform mineshaftStartTile = __instance.dungeonGenerator.Root.transform.Find("MineshaftStartTile(Clone)");
+            if (mineshaftStartTile == null)
+            {
+                Plugin.Logger.LogWarning("Failed to find MineshaftStartTile, so can not compute start room bounds. This will cause problems later!!");
+                return;
+            }
+
+            // calculate the bounds of the elevator start room
+            // center:  ( -1,   51.37,  3.2 )
+            // size:    ( 30,      20,   15 )
+            Vector3[] corners =
+            {
+                new(-16f, 41.37f, -4.3f),
+                new(14f, 41.37f, -4.3f),
+                new(-16f, 61.37f, -4.3f),
+                new(14f, 61.37f, -4.3f),
+                new(-16f, 41.37f, 10.7f),
+                new(14f, 41.37f, 10.7f),
+                new(-16f, 61.37f, 10.7f),
+                new(14f, 61.37f, 10.7f),
+            };
+            mineshaftStartTile.TransformPoints(corners);
+
+            // thanks Zaggy
+            Vector3 min = corners[0], max = corners[0];
+            for (int i = 1; i < corners.Length; i++)
+            {
+                min = Vector3.Min(min, corners[i]);
+                max = Vector3.Max(max, corners[i]);
+            }
+
+            NewMaskedAI.startRoomBounds = new()
+            {
+                min = min,
+                max = max
+            };
+            Plugin.Logger.LogDebug("Calculated bounds for mineshaft elevator's start room");
         }
     }
 }

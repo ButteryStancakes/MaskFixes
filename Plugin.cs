@@ -10,13 +10,13 @@ namespace MaskFixes
     [BepInDependency(GUID_STARLANCER_AI_FIX, BepInDependency.DependencyFlags.SoftDependency)]
     public class Plugin : BaseUnityPlugin
     {
-        const string PLUGIN_GUID = "butterystancakes.lethalcompany.maskfixes", PLUGIN_NAME = "Mask Fixes", PLUGIN_VERSION = "1.1.0";
+        const string PLUGIN_GUID = "butterystancakes.lethalcompany.maskfixes", PLUGIN_NAME = "Mask Fixes", PLUGIN_VERSION = "1.1.1";
         internal static new ManualLogSource Logger;
 
         const string GUID_STARLANCER_AI_FIX = "AudioKnight.StarlancerAIFix";
         internal static bool DISABLE_ENEMY_MESH_PATCH;
 
-        internal static ConfigEntry<bool> configPatchHidingBehavior, configPatchRoamingBehavior/*, configPrioritizeHiding*/;
+        internal static ConfigEntry<bool> configPatchHidingBehavior, configPatchRoamingBehavior;
 
         void Awake()
         {
@@ -39,12 +39,6 @@ namespace MaskFixes
                 "Patch Roaming Behavior",
                 true,
                 "(Host only) Rewrites Masked roaming behavior to fix some bugs with the vanilla implementation. This will fix Masked entering/exiting the building constantly, or getting stuck on the mineshaft elevator.");
-
-            /*configPrioritizeHiding = Config.Bind(
-                "Misc",
-                "Prioritize Hiding",
-                false,
-                "(Host only) When there are no players on the surface of the moon, and a Masked has been roaming on the surface for a long time, they will head towards the ship to try and hide on it instead of returning inside the building.\nThis deviates significantly from vanilla, but helps highlight their rare hiding behavior.\nRequires \"Patch Roaming Behavior\" to be enabled.");*/
 
             new Harmony(PLUGIN_GUID).PatchAll();
 

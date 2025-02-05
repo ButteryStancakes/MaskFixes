@@ -89,8 +89,8 @@ namespace MaskFixes
                     if (maskedAI.tempDist < inDist)
                     {
                         // can't reach this player
-                        if (!maskedAI.isOutside && !CanPathToPoint(maskedAI, StartOfRound.Instance.allPlayerScripts[i].transform.position))
-                            continue;
+                        /*if (!maskedAI.isOutside && !CanPathToPoint(maskedAI, StartOfRound.Instance.allPlayerScripts[i].transform.position))
+                            continue;*/
 
                         inDist = maskedAI.tempDist;
                         closestInsidePlayer = StartOfRound.Instance.allPlayerScripts[i];
@@ -152,7 +152,17 @@ namespace MaskFixes
         static bool CanPathToPoint(MaskedPlayerEnemy maskedAI, Vector3 pos)
         {
             maskedAI.pathDistance = 0f; // for consistency with vanilla
-            return maskedAI.agent.isOnNavMesh && maskedAI.agent.CalculatePath(pos, maskedAI.path1);
+
+            if (maskedAI.agent.isOnNavMesh && !maskedAI.agent.CalculatePath(pos, maskedAI.path1))
+                return false;
+
+            if (maskedAI.path1 == null || maskedAI.path1.corners.Length == 0)
+                return false;
+
+            if (Vector3.Distance(maskedAI.path1.corners[^1], RoundManager.Instance.GetNavMeshPosition(pos, RoundManager.Instance.navHit, 2.7f, maskedAI.agent.areaMask)) > 1.5f)
+                return false;
+
+            return true;
         }
 
         // return true if elevator is no longer needed
@@ -167,7 +177,7 @@ namespace MaskFixes
             // if we're already in the elevator, wait until it is done moving
             if (ridingElevator && (!maskedAI.elevatorScript.elevatorFinishedMoving || !maskedAI.elevatorScript.elevatorDoorOpen))
             {
-                maskedAI.SetDestinationToPosition(maskedAI.elevatorScript.elevatorInsidePoint.position);
+                //maskedAI.SetDestinationToPosition(maskedAI.elevatorScript.elevatorInsidePoint.position);
                 return false;
             }
 
@@ -199,9 +209,11 @@ namespace MaskFixes
                 }
 
                 // otherwise, try to get off the elevator
-                if (!needToUseElevator && maskedAI.elevatorScript.elevatorFinishedMoving && maskedAI.elevatorScript.elevatorDoorOpen && CanPathToPoint(maskedAI, elevatorOutsidePoint))
+                if (!needToUseElevator && maskedAI.elevatorScript.elevatorFinishedMoving && maskedAI.elevatorScript.elevatorDoorOpen)
                 {
-                    maskedAI.SetDestinationToPosition(elevatorOutsidePoint);
+                    if (CanPathToPoint(maskedAI, elevatorOutsidePoint))
+                        maskedAI.SetDestinationToPosition(elevatorOutsidePoint);
+
                     return false;
                 }
             }
@@ -209,9 +221,11 @@ namespace MaskFixes
             if (needToUseElevator)
             {
                 // if elevator is here, get on board
-                if (maskedAI.elevatorScript.elevatorFinishedMoving && maskedAI.elevatorScript.elevatorDoorOpen && maskedAI.elevatorScript.elevatorMovingDown != maskedAI.isInElevatorStartRoom && CanPathToPoint(maskedAI, maskedAI.elevatorScript.elevatorInsidePoint.position))
+                if (maskedAI.elevatorScript.elevatorFinishedMoving && maskedAI.elevatorScript.elevatorDoorOpen && maskedAI.elevatorScript.elevatorMovingDown != maskedAI.isInElevatorStartRoom)
                 {
-                    maskedAI.SetDestinationToPosition(maskedAI.elevatorScript.elevatorInsidePoint.position);
+                    if (CanPathToPoint(maskedAI, maskedAI.elevatorScript.elevatorInsidePoint.position))
+                        maskedAI.SetDestinationToPosition(maskedAI.elevatorScript.elevatorInsidePoint.position);
+
                     return false;
                 }
 

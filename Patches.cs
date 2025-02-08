@@ -322,6 +322,15 @@ namespace MaskFixes
             // fix proximity warning on entrance doors
             if (!RoundManager.Instance.SpawnedEnemies.Contains(__instance))
                 RoundManager.Instance.SpawnedEnemies.Add(__instance);
+
+            // fix erroneous tagging (water nullrefs)
+            foreach (Transform trans in __instance.GetComponentsInChildren<Transform>())
+            {
+                if (trans.CompareTag("Player"))
+                    trans.tag = "Enemy";
+                else if (trans.CompareTag("PlayerBody"))
+                    trans.tag = "Untagged";
+            }
         }
 
         [HarmonyPatch(nameof(MaskedPlayerEnemy.HitEnemy))]

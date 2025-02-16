@@ -377,7 +377,7 @@ namespace MaskFixes
                 }
                 if (Plugin.configTragedyChance.Value > 0f)
                 {
-                    if (Plugin.configTragedyChance.Value >= 1f || (new System.Random(StartOfRound.Instance.randomMapSeed + (int)__instance.NetworkObjectId).NextDouble() < Plugin.configTragedyChance.Value))
+                    if (Plugin.configTragedyChance.Value >= 1f || (new System.Random(StartOfRound.Instance.randomMapSeed + (int)__instance.NetworkObjectId + __instance.thisEnemyIndex).NextDouble() < Plugin.configTragedyChance.Value))
                         __instance.SetMaskType(5);
                 }
             }

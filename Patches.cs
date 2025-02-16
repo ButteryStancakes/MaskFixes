@@ -16,7 +16,9 @@ namespace MaskFixes
         static Material TRAGEDY_MAT;
         static AudioClip[] TRAGEDY_RANDOM_CLIPS;
 
-        static float localPlayerLastTeleported;
+        static float localPlayerLastTeleported, safeTimer;
+
+        static readonly List<int> suitIndices = [0,1,2,3,24,25,26];
 
         [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.Awake))]
         [HarmonyPostfix]
@@ -83,6 +85,28 @@ namespace MaskFixes
             }
             else
                 Plugin.Logger.LogWarning("Failed to find reference to Masked enemy type. Could not apply power level fix");
+
+            suitIndices.Clear();
+            string[] suitsToMatch = [];
+            try
+            {
+                suitsToMatch = Plugin.configSuitWhitelist.Value.Split(',');
+            }
+            catch
+            {
+                suitsToMatch = Plugin.VANILLA_SUITS.Split(',');
+            }
+            for (int i = 0; i < __instance.unlockablesList.unlockables.Count; i++)
+            {
+                foreach (string suitToMatch in suitsToMatch)
+                {
+                    if (__instance.unlockablesList.unlockables[i].unlockableName.ToLower().StartsWith(suitToMatch.ToLower()))
+                    {
+                        suitIndices.Add(i);
+                        Plugin.Logger.LogDebug($"Random suit list: Added \"{__instance.unlockablesList.unlockables[i].unlockableName}\"");
+                    }
+                }
+            }
         }
 
         static void ConvertMaskToTragedy(Transform mask)
@@ -298,17 +322,24 @@ namespace MaskFixes
                 ConvertMaskToTragedy(__instance.maskTypes[0].transform);
 
                 // and swap the sound files (these wouldn't work if the tragedy's GameObject was just toggled on)
-                if (TRAGEDY_RANDOM_CLIPS != null)
+                RandomPeriodicAudioPlayer randomPeriodicAudioPlayer = __instance.maskTypes[0].GetComponent<RandomPeriodicAudioPlayer>();
+                if (randomPeriodicAudioPlayer != null)
                 {
-                    RandomPeriodicAudioPlayer randomPeriodicAudioPlayer = __instance.maskTypes[0].GetComponent<RandomPeriodicAudioPlayer>();
-                    if (randomPeriodicAudioPlayer != null)
+                    randomPeriodicAudioPlayer.thisAudio.Stop();
+                    if (TRAGEDY_RANDOM_CLIPS != null)
                     {
                         randomPeriodicAudioPlayer.randomClips = TRAGEDY_RANDOM_CLIPS;
+                        // replay Tragedy voice clip as early as possible
+                        if (randomPeriodicAudioPlayer.IsServer)
+                            randomPeriodicAudioPlayer.lastIntervalTime = Time.realtimeSinceStartup + randomPeriodicAudioPlayer.currentInterval - Time.fixedDeltaTime;
                         Plugin.Logger.LogDebug($"Mimic #{__instance.GetInstanceID()}: Cries");
                     }
+                    else
+                    {
+                        randomPeriodicAudioPlayer.enabled = false;
+                        Plugin.Logger.LogWarning("Crying audio is missing, there should be more information earlier in the log");
+                    }
                 }
-                else
-                    Plugin.Logger.LogWarning("Crying audio is missing, there should be more information earlier in the log");
             }
 
             // need to replace the vanilla behavior entirely because it's just too problematic
@@ -330,6 +361,25 @@ namespace MaskFixes
                     trans.tag = "Enemy";
                 else if (trans.CompareTag("PlayerBody"))
                     trans.tag = "Untagged";
+            }
+
+            // randomize
+            if (__instance.mimickingPlayer == null && Time.realtimeSinceStartup - safeTimer > 10f)
+            {
+                if (Plugin.configRandomSuits.Value)
+                {
+                    int randSuit = suitIndices[new System.Random(StartOfRound.Instance.randomMapSeed + (int)__instance.NetworkObjectId).Next(suitIndices.Count)];
+                    if (randSuit != 0)
+                    {
+                        __instance.SetSuit(randSuit);
+                        Plugin.Logger.LogDebug($"Mimic #{__instance.GetInstanceID()}: Equip \"{StartOfRound.Instance.unlockablesList.unlockables[randSuit].unlockableName}\"");
+                    }
+                }
+                if (Plugin.configTragedyChance.Value > 0f)
+                {
+                    if (Plugin.configTragedyChance.Value >= 1f || (new System.Random(StartOfRound.Instance.randomMapSeed + (int)__instance.NetworkObjectId).NextDouble() < Plugin.configTragedyChance.Value))
+                        __instance.SetMaskType(5);
+                }
             }
         }
 
@@ -530,7 +580,7 @@ namespace MaskFixes
             // center:  ( -1,   51.37,  3.2 )
             // size:    ( 30,      20,   15 )
             Vector3[] corners =
-            {
+            [
                 new(-16f, 41.37f, -4.3f),
                 new(14f, 41.37f, -4.3f),
                 new(-16f, 61.37f, -4.3f),
@@ -539,7 +589,7 @@ namespace MaskFixes
                 new(14f, 41.37f, 10.7f),
                 new(-16f, 61.37f, 10.7f),
                 new(14f, 61.37f, 10.7f),
-            };
+            ];
             mineshaftStartTile.TransformPoints(corners);
 
             // thanks Zaggy
@@ -556,6 +606,14 @@ namespace MaskFixes
                 max = max
             };
             Plugin.Logger.LogDebug("Calculated bounds for mineshaft elevator's start room");
+        }
+
+        [HarmonyPatch(nameof(MaskedPlayerEnemy.KillPlayerAnimationClientRpc))]
+        [HarmonyPatch(typeof(HauntedMaskItem), nameof(HauntedMaskItem.AttachClientRpc))]
+        [HarmonyPostfix]
+        static void Post_Rpc_SetSafeTimer()
+        {
+            safeTimer = Time.realtimeSinceStartup;
         }
     }
 }

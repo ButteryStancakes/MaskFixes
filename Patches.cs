@@ -18,7 +18,16 @@ namespace MaskFixes
 
         static float localPlayerLastTeleported, safeTimer;
 
-        static readonly List<int> suitIndices = [0,1,2,3,24,25,26];
+        static readonly List<int> suitIndices =
+        [
+             0, // orange
+             1, // green
+             2, // hazard
+             3, // pajama
+            24, // purple
+            25, // bee
+            26  // bunny
+        ];
 
         [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.Awake))]
         [HarmonyPostfix]
@@ -377,7 +386,7 @@ namespace MaskFixes
                 }
                 if (Plugin.configTragedyChance.Value > 0f)
                 {
-                    if (Plugin.configTragedyChance.Value >= 1f || (new System.Random(StartOfRound.Instance.randomMapSeed + (int)__instance.NetworkObjectId + __instance.thisEnemyIndex).NextDouble() < Plugin.configTragedyChance.Value))
+                    if (Plugin.configTragedyChance.Value >= 1f || new System.Random(StartOfRound.Instance.randomMapSeed * (int)__instance.NetworkObjectId).NextDouble() < Plugin.configTragedyChance.Value)
                         __instance.SetMaskType(5);
                 }
             }
@@ -608,10 +617,16 @@ namespace MaskFixes
             Plugin.Logger.LogDebug("Calculated bounds for mineshaft elevator's start room");
         }
 
-        [HarmonyPatch(nameof(MaskedPlayerEnemy.KillPlayerAnimationClientRpc))]
         [HarmonyPatch(typeof(HauntedMaskItem), nameof(HauntedMaskItem.AttachClientRpc))]
         [HarmonyPostfix]
-        static void Post_Rpc_SetSafeTimer()
+        static void HauntedMaskItem_Post_AttachClientRpc()
+        {
+            safeTimer = Time.realtimeSinceStartup;
+        }
+
+        [HarmonyPatch(nameof(MaskedPlayerEnemy.KillPlayerAnimationClientRpc))]
+        [HarmonyPostfix]
+        static void MaskedPlayerEnemy_Post_KillPlayerAnimationClientRpc(MaskedPlayerEnemy __instance)
         {
             safeTimer = Time.realtimeSinceStartup;
         }

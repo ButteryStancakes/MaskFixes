@@ -10,12 +10,13 @@ namespace MaskFixes
     [BepInDependency(GUID_STARLANCER_AI_FIX, BepInDependency.DependencyFlags.SoftDependency)]
     public class Plugin : BaseUnityPlugin
     {
-        const string PLUGIN_GUID = "butterystancakes.lethalcompany.maskfixes", PLUGIN_NAME = "Mask Fixes", PLUGIN_VERSION = "1.2.1";
+        const string PLUGIN_GUID = "butterystancakes.lethalcompany.maskfixes", PLUGIN_NAME = "Mask Fixes", PLUGIN_VERSION = "1.2.2";
         internal static new ManualLogSource Logger;
 
         const string GUID_STARLANCER_AI_FIX = "AudioKnight.StarlancerAIFix";
         internal static bool DISABLE_ENEMY_MESH_PATCH;
 
+        internal const string HARMONY_MORE_SUITS = "x753.More_Suits", HARMONY_CLASSIC_SUIT_RESTORATION = "butterystancakes.lethalcompany.classicsuitrestoration";
         internal const string VANILLA_SUITS = "orange,green,hazard,pajama,purple,bee,bunny";
 
         internal static ConfigEntry<bool> configPatchHidingBehavior, configPatchRoamingBehavior, configRandomSuits;

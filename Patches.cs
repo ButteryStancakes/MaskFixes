@@ -18,13 +18,15 @@ namespace MaskFixes
 
         static float localPlayerLastTeleported, safeTimer;
 
+        const int PURPLE_SUIT_ID = 24;
+
         static readonly List<int> suitIndices =
         [
              0, // orange
              1, // green
              2, // hazard
              3, // pajama
-            24, // purple
+            PURPLE_SUIT_ID,
             25, // bee
             26  // bunny
         ];
@@ -94,8 +96,15 @@ namespace MaskFixes
             }
             else
                 Plugin.Logger.LogWarning("Failed to find reference to Masked enemy type. Could not apply power level fix");
+        }
 
+        [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.Start))]
+        [HarmonyPostfix]
+        [HarmonyAfter(Plugin.HARMONY_MORE_SUITS)]
+        static void StartOfRound_Post_Start(StartOfRound __instance)
+        {
             suitIndices.Clear();
+
             string[] suitsToMatch = [];
             try
             {
@@ -105,12 +114,23 @@ namespace MaskFixes
             {
                 suitsToMatch = Plugin.VANILLA_SUITS.Split(',');
             }
+
+            bool addedOrangeSuit = false; // more suits adds like 100 duplicates of the orange suit, for some reason
+
             for (int i = 0; i < __instance.unlockablesList.unlockables.Count; i++)
             {
                 foreach (string suitToMatch in suitsToMatch)
                 {
                     if (__instance.unlockablesList.unlockables[i].unlockableName.ToLower().StartsWith(suitToMatch.ToLower()))
                     {
+                        if (__instance.unlockablesList.unlockables[i].unlockableName == "Orange suit")
+                        {
+                            if (addedOrangeSuit)
+                                continue;
+
+                            addedOrangeSuit = true;
+                        }
+
                         suitIndices.Add(i);
                         Plugin.Logger.LogDebug($"Random suit list: Added \"{__instance.unlockablesList.unlockables[i].unlockableName}\"");
                     }
@@ -384,6 +404,9 @@ namespace MaskFixes
                         Plugin.Logger.LogDebug($"Mimic #{__instance.GetInstanceID()}: Equip \"{StartOfRound.Instance.unlockablesList.unlockables[randSuit].unlockableName}\"");
                     }
                 }
+                else if (StartOfRound.Instance.isChallengeFile)
+                    __instance.SetSuit(PURPLE_SUIT_ID);
+
                 if (Plugin.configTragedyChance.Value > 0f)
                 {
                     if (Plugin.configTragedyChance.Value >= 1f || new System.Random(StartOfRound.Instance.randomMapSeed * (int)__instance.NetworkObjectId).NextDouble() < Plugin.configTragedyChance.Value)

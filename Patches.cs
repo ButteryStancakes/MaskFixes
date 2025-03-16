@@ -1,4 +1,5 @@
-﻿using HarmonyLib;
+﻿using GameNetcodeStuff;
+using HarmonyLib;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -652,6 +653,31 @@ namespace MaskFixes
         static void MaskedPlayerEnemy_Post_KillPlayerAnimationClientRpc(MaskedPlayerEnemy __instance)
         {
             safeTimer = Time.realtimeSinceStartup;
+        }
+
+        [HarmonyPatch(nameof(MaskedPlayerEnemy.killAnimation), MethodType.Enumerator)]
+        [HarmonyTranspiler]
+        static IEnumerable<CodeInstruction> MaskedPlayerEnemy_Trans_killAnimation(IEnumerable<CodeInstruction> instructions)
+        {
+            if (!Plugin.configFixAttackConversion.Value)
+                return instructions;
+
+            List<CodeInstruction> codes = instructions.ToList();
+
+            MethodInfo killPlayer = AccessTools.Method(typeof(PlayerControllerB), nameof(PlayerControllerB.KillPlayer));
+            MethodInfo zero = AccessTools.DeclaredPropertyGetter(typeof(Vector3), nameof(Vector3.zero));
+            for (int i = 7; i < codes.Count; i++)
+            {
+                if (codes[i].opcode == OpCodes.Callvirt && (MethodInfo)codes[i].operand == killPlayer && codes[i - 7].opcode == OpCodes.Call && (MethodInfo)codes[i - 7].operand == zero && codes[i - 6].opcode == OpCodes.Ldc_I4_0)
+                {
+                    codes[i - 6].opcode = OpCodes.Ldc_I4_1;
+                    Plugin.Logger.LogDebug("Transpiler (Mimic kill): Spawn body");
+                    return codes;
+                }
+            }
+
+            Plugin.Logger.LogError("Mimic kill transpiler failed");
+            return instructions;
         }
     }
 }

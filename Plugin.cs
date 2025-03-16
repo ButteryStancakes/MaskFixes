@@ -8,24 +8,33 @@ namespace MaskFixes
 {
     [BepInPlugin(PLUGIN_GUID, PLUGIN_NAME, PLUGIN_VERSION)]
     [BepInDependency(GUID_STARLANCER_AI_FIX, BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency(GUID_LOBBY_COMPATIBILITY, BepInDependency.DependencyFlags.SoftDependency)]
     public class Plugin : BaseUnityPlugin
     {
-        const string PLUGIN_GUID = "butterystancakes.lethalcompany.maskfixes", PLUGIN_NAME = "Mask Fixes", PLUGIN_VERSION = "1.2.2";
+        internal const string PLUGIN_GUID = "butterystancakes.lethalcompany.maskfixes", PLUGIN_NAME = "Mask Fixes", PLUGIN_VERSION = "1.3.0";
         internal static new ManualLogSource Logger;
 
         const string GUID_STARLANCER_AI_FIX = "AudioKnight.StarlancerAIFix";
         internal static bool DISABLE_ENEMY_MESH_PATCH;
 
+        const string GUID_LOBBY_COMPATIBILITY = "BMX.LobbyCompatibility";
+
         internal const string HARMONY_MORE_SUITS = "x753.More_Suits", HARMONY_CLASSIC_SUIT_RESTORATION = "butterystancakes.lethalcompany.classicsuitrestoration";
         internal const string VANILLA_SUITS = "orange,green,hazard,pajama,purple,bee,bunny";
 
-        internal static ConfigEntry<bool> configPatchHidingBehavior, configPatchRoamingBehavior, configRandomSuits;
+        internal static ConfigEntry<bool> configPatchHidingBehavior, configPatchRoamingBehavior, configRandomSuits, configFixAttackConversion;
         internal static ConfigEntry<float> configTragedyChance;
         internal static ConfigEntry<string> configSuitWhitelist;
 
         void Awake()
         {
             Logger = base.Logger;
+
+            if (Chainloader.PluginInfos.ContainsKey(GUID_LOBBY_COMPATIBILITY))
+            {
+                Logger.LogInfo("CROSS-COMPATIBILITY - Lobby Compatibility detected");
+                LobbyCompatibility.Init();
+            }
 
             if (Chainloader.PluginInfos.ContainsKey(GUID_STARLANCER_AI_FIX))
             {
@@ -44,6 +53,12 @@ namespace MaskFixes
                 "Patch Roaming Behavior",
                 true,
                 "(Host only) Rewrites Masked roaming behavior to fix some bugs with the vanilla implementation. This will fix Masked entering/exiting the building constantly, or getting stuck on the mineshaft elevator.");
+
+            configFixAttackConversion = Config.Bind(
+                "Misc",
+                "Fix Attack Conversion",
+                true,
+                "(Client-side, requires restart) When you are killed by a Masked, this will fix your mimic's appearance not synchronizing for anybody except the host. As a side effect this will also make you drop your items when converted.");
 
             configRandomSuits = Config.Bind(
                 "Bonus",

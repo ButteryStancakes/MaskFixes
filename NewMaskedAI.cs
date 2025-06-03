@@ -202,9 +202,12 @@ namespace MaskFixes
             if (ridingElevator)
             {
                 // elevator is in the wrong position, need to press the button
-                if (needToUseElevator && maskedAI.elevatorScript.elevatorMovingDown != maskedAI.isInElevatorStartRoom)
+                if (needToUseElevator)
                 {
-                    maskedAI.elevatorScript.PressElevatorButtonOnServer(true);
+                    // elevator is in the wrong position, need to press the button
+                    if (maskedAI.elevatorScript.elevatorMovingDown != maskedAI.isInElevatorStartRoom)
+                        maskedAI.elevatorScript.PressElevatorButtonOnServer(true);
+
                     return false;
                 }
 
@@ -233,7 +236,7 @@ namespace MaskFixes
                 if (Vector3.Distance(maskedAI.transform.position, elevatorOutsidePoint) < 1f)
                 {
                     // need to call the elevator when we can
-                    if (maskedAI.elevatorScript.elevatorMovingDown == maskedAI.isInElevatorStartRoom && !maskedAI.elevatorScript.elevatorCalled)
+                    if (maskedAI.elevatorScript.elevatorMovingDown == maskedAI.isInElevatorStartRoom && !maskedAI.elevatorScript.elevatorCalled && !ridingElevator)
                         maskedAI.elevatorScript.CallElevator(!maskedAI.isInElevatorStartRoom);
 
                     return false;

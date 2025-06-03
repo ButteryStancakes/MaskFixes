@@ -13,8 +13,8 @@ namespace MaskFixes
     [HarmonyPatch(typeof(MaskedPlayerEnemy))]
     class Patches
     {
-        static Mesh TRAGEDY_MASK, TRAGEDY_MASK_LOD, TRAGEDY_EYES_FILLED;
-        static Material TRAGEDY_MAT;
+        static Mesh TRAGEDY_MASK, TRAGEDY_MASK_LOD, TRAGEDY_EYES_FILLED, COMEDY_MASK, COMEDY_MASK_LOD, COMEDY_EYES_FILLED;
+        static Material TRAGEDY_MAT, COMEDY_MAT;
         static AudioClip[] TRAGEDY_RANDOM_CLIPS;
 
         static float localPlayerLastTeleported, safeTimer;
@@ -36,33 +36,58 @@ namespace MaskFixes
         [HarmonyPostfix]
         static void StartOfRound_Post_Awake(StartOfRound __instance)
         {
-            GameObject tragedyRagdoll = __instance.playerRagdolls?.FirstOrDefault(playerRagdoll => playerRagdoll.name == "PlayerRagdollWithTragedyMask Variant");
-            if (tragedyRagdoll != null)
+            foreach (GameObject playerRagdoll in __instance.playerRagdolls)
             {
-                // cache all of the visual references to the tragedy mask (the item and enemy prefabs are broken, only the ragdoll has all the correct assets)
-                foreach (MeshFilter meshFilter in tragedyRagdoll.GetComponentsInChildren<MeshFilter>())
+                switch (playerRagdoll.name)
                 {
-                    switch (meshFilter.name)
-                    {
-                        case "Mesh":
-                            TRAGEDY_MASK = meshFilter.sharedMesh;
-                            Plugin.Logger.LogDebug("Cached Tragedy model");
-                            TRAGEDY_MAT = meshFilter.GetComponent<MeshRenderer>()?.sharedMaterial;
-                            Plugin.Logger.LogDebug("Cached Tragedy material");
-                            break;
-                        case "ComedyMaskLOD1":
-                            TRAGEDY_MASK_LOD = meshFilter.sharedMesh;
-                            Plugin.Logger.LogDebug("Cached Tragedy LOD");
-                            break;
-                        case "EyesFilled":
-                            TRAGEDY_EYES_FILLED = meshFilter.sharedMesh;
-                            Plugin.Logger.LogDebug("Cached Tragedy glowing eyes");
-                            break;
-                    }
+                    case "PlayerRagdollWithComedyMask Variant":
+                        // cache all of the visual references to the comedy mask
+                        foreach (MeshFilter meshFilter in playerRagdoll.GetComponentsInChildren<MeshFilter>())
+                        {
+                            switch (meshFilter.name)
+                            {
+                                case "Mesh":
+                                    COMEDY_MASK = meshFilter.sharedMesh;
+                                    Plugin.Logger.LogDebug("Cached Comedy model");
+                                    COMEDY_MAT = meshFilter.GetComponent<MeshRenderer>()?.sharedMaterial;
+                                    Plugin.Logger.LogDebug("Cached Comedy material");
+                                    break;
+                                case "ComedyMaskLOD1":
+                                    COMEDY_MASK_LOD = meshFilter.sharedMesh;
+                                    Plugin.Logger.LogDebug("Cached Comedy LOD");
+                                    break;
+                                case "EyesFilled":
+                                    COMEDY_EYES_FILLED = meshFilter.sharedMesh;
+                                    Plugin.Logger.LogDebug("Cached Comedy glowing eyes");
+                                    break;
+                            }
+                        }
+                        break;
+                    case "PlayerRagdollWithTragedyMask Variant":
+                        // cache all of the visual references to the tragedy mask
+                        foreach (MeshFilter meshFilter in playerRagdoll.GetComponentsInChildren<MeshFilter>())
+                        {
+                            switch (meshFilter.name)
+                            {
+                                case "Mesh":
+                                    TRAGEDY_MASK = meshFilter.sharedMesh;
+                                    Plugin.Logger.LogDebug("Cached Tragedy model");
+                                    TRAGEDY_MAT = meshFilter.GetComponent<MeshRenderer>()?.sharedMaterial;
+                                    Plugin.Logger.LogDebug("Cached Tragedy material");
+                                    break;
+                                case "TragedyMaskLOD1":
+                                    TRAGEDY_MASK_LOD = meshFilter.sharedMesh;
+                                    Plugin.Logger.LogDebug("Cached Tragedy LOD");
+                                    break;
+                                case "EyesFilled":
+                                    TRAGEDY_EYES_FILLED = meshFilter.sharedMesh;
+                                    Plugin.Logger.LogDebug("Cached Tragedy glowing eyes");
+                                    break;
+                            }
+                        }
+                        break;
                 }
             }
-            else
-                Plugin.Logger.LogWarning("Failed to find reference to Tragedy ragdoll. This will cause problems later!!");
 
             GameObject tragedyMask = __instance.allItemsList?.itemsList?.FirstOrDefault(item => item.name == "TragedyMask")?.spawnPrefab;
             if (tragedyMask != null)
@@ -88,15 +113,6 @@ namespace MaskFixes
             }
             else
                 Plugin.Logger.LogWarning("Failed to find reference to Tragedy mask. This will cause problems later!!");
-
-            EnemyType maskedPlayerEnemy = __instance.currentLevel?.Enemies?.FirstOrDefault(enemy => enemy.enemyType.name == "MaskedPlayerEnemy")?.enemyType ?? Object.FindAnyObjectByType<QuickMenuManager>()?.testAllEnemiesLevel?.Enemies?.FirstOrDefault(enemy => enemy.enemyType.name == "MaskedPlayerEnemy")?.enemyType;
-            if (maskedPlayerEnemy != null)
-            {
-                maskedPlayerEnemy.isOutsideEnemy = false;
-                Plugin.Logger.LogDebug("Masked: Subtract from indoor power, not outdoor power");
-            }
-            else
-                Plugin.Logger.LogWarning("Failed to find reference to Masked enemy type. Could not apply power level fix");
         }
 
         [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.Start))]
@@ -139,32 +155,42 @@ namespace MaskFixes
             }
         }
 
-        static void ConvertMaskToTragedy(Transform mask)
+        static void ConvertMaskAppearance(Transform mask, bool toTragedy)
         {
-            Transform mesh = mask.Find("Mesh");
-            if (mesh != null && TRAGEDY_MASK != null && TRAGEDY_MAT != null)
+            Mesh meshMask = TRAGEDY_MASK, meshLOD = TRAGEDY_MASK_LOD, meshEyes = TRAGEDY_EYES_FILLED;
+            Material materialMask = TRAGEDY_MAT;
+            if (!toTragedy)
             {
-                mesh.GetComponent<MeshFilter>().mesh = TRAGEDY_MASK;
-                mesh.GetComponent<MeshRenderer>().sharedMaterial = TRAGEDY_MAT;
+                meshMask = COMEDY_MASK;
+                meshLOD = COMEDY_MASK_LOD;
+                meshEyes = COMEDY_EYES_FILLED;
+                materialMask = COMEDY_MAT;
+            }
 
-                MeshFilter tragedyMaskEyesFilled = mesh.Find("EyesFilled")?.GetComponent<MeshFilter>();
-                if (tragedyMaskEyesFilled != null && TRAGEDY_EYES_FILLED != null)
+            Transform mesh = mask.Find("Mesh");
+            if (mesh != null && meshMask != null && materialMask != null)
+            {
+                mesh.GetComponent<MeshFilter>().mesh = meshMask;
+                mesh.GetComponent<MeshRenderer>().sharedMaterial = materialMask;
+
+                MeshFilter objEyes = mesh.Find("EyesFilled")?.GetComponent<MeshFilter>();
+                if (objEyes != null && meshEyes != null)
                 {
-                    tragedyMaskEyesFilled.mesh = TRAGEDY_EYES_FILLED;
+                    objEyes.mesh = meshEyes;
 
-                    MeshFilter tragedyMaskLOD = mask.Find("ComedyMaskLOD1")?.GetComponent<MeshFilter>();
-                    if (tragedyMaskLOD != null && TRAGEDY_MASK_LOD != null)
+                    MeshFilter objLOD = mask.Find("ComedyMaskLOD1")?.GetComponent<MeshFilter>();
+                    if (objLOD != null && meshLOD != null)
                     {
-                        tragedyMaskLOD.mesh = TRAGEDY_MASK_LOD;
-                        tragedyMaskLOD.GetComponent<MeshRenderer>().sharedMaterial = TRAGEDY_MAT;
+                        objLOD.mesh = meshLOD;
+                        objLOD.GetComponent<MeshRenderer>().sharedMaterial = materialMask;
 
                         Plugin.Logger.LogDebug($"Mask {mask.GetInstanceID()}: All meshes replaced successfully");
                     }
                     else
-                        Plugin.Logger.LogWarning($"Mask {mask.GetInstanceID()}: Failed to replace eyes");
+                        Plugin.Logger.LogWarning($"Mask {mask.GetInstanceID()}: Failed to replace LOD");
                 }
                 else
-                    Plugin.Logger.LogWarning($"Mask {mask.GetInstanceID()}: Failed to replace LOD");
+                    Plugin.Logger.LogWarning($"Mask {mask.GetInstanceID()}: Failed to replace eyes");
             }
             else
                 Plugin.Logger.LogWarning($"Mask {mask.GetInstanceID()}: Failed to replace mesh");
@@ -174,11 +200,8 @@ namespace MaskFixes
         [HarmonyPostfix]
         static void HauntedMaskItem_Post_MaskClampToHeadAnimationEvent(HauntedMaskItem __instance)
         {
-            if (__instance.maskTypeId == 5)
-            {
-                Plugin.Logger.LogDebug($"Mask #{__instance.GetInstanceID()}: I am a Tragedy, change appearance of face mask");
-                ConvertMaskToTragedy(__instance.currentHeadMask.transform);
-            }
+            Plugin.Logger.LogDebug($"Mask #{__instance.GetInstanceID()}: Change appearance of face mask");
+            ConvertMaskAppearance(__instance.currentHeadMask.transform, __instance.maskTypeId == 5);
         }
 
         [HarmonyPatch(nameof(MaskedPlayerEnemy.Update))]
@@ -305,13 +328,13 @@ namespace MaskFixes
             Renderer betaBadgeMesh = spine003.Find("BetaBadge")?.GetComponent<Renderer>();
             if (betaBadgeMesh != null)
             {
-                betaBadgeMesh.enabled = __instance.mimickingPlayer.playerBetaBadgeMesh.enabled;
+                betaBadgeMesh.enabled = __instance.mimickingPlayer == GameNetworkManager.Instance.localPlayerController ? ES3.Load("playedDuringBeta", "LCGeneralSaveData", true) : __instance.mimickingPlayer.playerBetaBadgeMesh.enabled;
                 Plugin.Logger.LogDebug($"Mimic #{__instance.GetInstanceID()}: VIP {(betaBadgeMesh.enabled ? "enabled" : "disabled")}");
             }
             MeshFilter badgeMesh = spine003.Find("LevelSticker")?.GetComponent<MeshFilter>();
             if (badgeMesh != null)
             {
-                badgeMesh.mesh = __instance.mimickingPlayer.playerBadgeMesh.mesh;
+                badgeMesh.mesh = (__instance.mimickingPlayer.playerLevelNumber >= 0 && __instance.mimickingPlayer.playerLevelNumber < HUDManager.Instance.playerLevels.Length) ? HUDManager.Instance.playerLevels[__instance.mimickingPlayer.playerLevelNumber].badgeMesh : __instance.mimickingPlayer.playerBadgeMesh.mesh;
                 Plugin.Logger.LogDebug($"Mimic #{__instance.GetInstanceID()}: Updated level sticker");
             }
 
@@ -349,7 +372,7 @@ namespace MaskFixes
                 Plugin.Logger.LogDebug($"Mimic #{__instance.GetInstanceID()}: Should be Tragedy");
 
                 // replace the comedy mask's models with the tragedy models
-                ConvertMaskToTragedy(__instance.maskTypes[0].transform);
+                ConvertMaskAppearance(__instance.maskTypes[0].transform, true);
 
                 // and swap the sound files (these wouldn't work if the tragedy's GameObject was just toggled on)
                 RandomPeriodicAudioPlayer randomPeriodicAudioPlayer = __instance.maskTypes[0].GetComponent<RandomPeriodicAudioPlayer>();
@@ -440,20 +463,6 @@ namespace MaskFixes
 
             Plugin.Logger.LogError("Mimic stun transpiler failed");
             return instructions;
-        }
-
-        [HarmonyPatch(typeof(EnemyAI), nameof(EnemyAI.SubtractFromPowerLevel))]
-        [HarmonyPrefix]
-        static void EnemyAI_Pre_SubtractFromPowerLevel(EnemyAI __instance)
-        {
-            if (__instance.removedPowerLevel)
-                return;
-
-            if (__instance is MaskedPlayerEnemy maskedPlayerEnemy && maskedPlayerEnemy.mimickingPlayer != null)
-            {
-                Plugin.Logger.LogDebug($"Mimic #{__instance.GetInstanceID()}: Was mimicking a player; won't subtract from power level");
-                __instance.removedPowerLevel = true;
-            }
         }
 
         [HarmonyPatch(typeof(EnemyAI), nameof(EnemyAI.EnableEnemyMesh))]

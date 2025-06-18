@@ -121,36 +121,50 @@ namespace MaskFixes
         static void StartOfRound_Post_Start(StartOfRound __instance)
         {
             suitIndices.Clear();
+            bool selectAll = Plugin.configSuitWhitelist.Value.ToLower() == "all";
 
             string[] suitsToMatch = [];
-            try
+            if (!selectAll)
             {
-                suitsToMatch = Plugin.configSuitWhitelist.Value.Split(',');
-            }
-            catch
-            {
-                suitsToMatch = Plugin.VANILLA_SUITS.Split(',');
+                try
+                {
+                    suitsToMatch = Plugin.configSuitWhitelist.Value.Split(',');
+                }
+                catch
+                {
+                    suitsToMatch = Plugin.VANILLA_SUITS.Split(',');
+                }
             }
 
             bool addedOrangeSuit = false; // more suits adds like 100 duplicates of the orange suit, for some reason
 
             for (int i = 0; i < __instance.unlockablesList.unlockables.Count; i++)
             {
-                foreach (string suitToMatch in suitsToMatch)
+                if (__instance.unlockablesList.unlockables[i].unlockableType != 0 || __instance.unlockablesList.unlockables[i].suitMaterial == null)
+                    continue;
+
+                bool addThisSuit = selectAll;
+                if (!addThisSuit)
                 {
-                    if (__instance.unlockablesList.unlockables[i].unlockableName.ToLower().StartsWith(suitToMatch.ToLower()))
+                    foreach (string suitToMatch in suitsToMatch)
                     {
-                        if (__instance.unlockablesList.unlockables[i].unlockableName == "Orange suit")
-                        {
-                            if (addedOrangeSuit)
-                                continue;
-
-                            addedOrangeSuit = true;
-                        }
-
-                        suitIndices.Add(i);
-                        Plugin.Logger.LogDebug($"Random suit list: Added \"{__instance.unlockablesList.unlockables[i].unlockableName}\"");
+                        if (__instance.unlockablesList.unlockables[i].unlockableName.ToLower().StartsWith(suitToMatch.ToLower()))
+                            addThisSuit = true;
                     }
+                }
+
+                if (addThisSuit)
+                {
+                    if (__instance.unlockablesList.unlockables[i].unlockableName == "Orange suit")
+                    {
+                        if (addedOrangeSuit)
+                            continue;
+
+                        addedOrangeSuit = true;
+                    }
+
+                    suitIndices.Add(i);
+                    Plugin.Logger.LogDebug($"Random suit list: Added \"{__instance.unlockablesList.unlockables[i].unlockableName}\"");
                 }
             }
         }
@@ -323,7 +337,18 @@ namespace MaskFixes
             if (__instance.mimickingPlayer == null || __instance.timeSinceSpawn > 40f)
                 return;
 
-            Transform spine003 = __instance.maskTypes[0].transform.parent.parent;
+            if (__instance.maskTypes == null || __instance.maskTypes.Length < 2)
+            {
+                Plugin.Logger.LogWarning($"There was a problem fetching mask for Mimic #{__instance.GetInstanceID()}");
+                return;
+            }
+
+            Transform spine003 = __instance.maskTypes[0]?.transform.parent?.parent;
+            if (spine003 == null)
+            {
+                Plugin.Logger.LogWarning($"There was a problem fetching skeleton for Mimic #{__instance.GetInstanceID()}");
+                return;
+            }
 
             Renderer betaBadgeMesh = spine003.Find("BetaBadge")?.GetComponent<Renderer>();
             if (betaBadgeMesh != null)
@@ -338,7 +363,6 @@ namespace MaskFixes
                 Plugin.Logger.LogDebug($"Mimic #{__instance.GetInstanceID()}: Updated level sticker");
             }
 
-            // toggling GameObjects under a NetworkObject maybe also a bad idea?
             try
             {
                 foreach (DecalProjector bloodDecal in __instance.transform.GetComponentsInChildren<DecalProjector>())

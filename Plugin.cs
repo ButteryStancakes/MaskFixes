@@ -11,7 +11,7 @@ namespace MaskFixes
     [BepInDependency(GUID_LOBBY_COMPATIBILITY, BepInDependency.DependencyFlags.SoftDependency)]
     public class Plugin : BaseUnityPlugin
     {
-        internal const string PLUGIN_GUID = "butterystancakes.lethalcompany.maskfixes", PLUGIN_NAME = "Mask Fixes", PLUGIN_VERSION = "1.4.0";
+        internal const string PLUGIN_GUID = "butterystancakes.lethalcompany.maskfixes", PLUGIN_NAME = "Mask Fixes", PLUGIN_VERSION = "1.4.1";
         internal static new ManualLogSource Logger;
 
         const string GUID_STARLANCER_AI_FIX = "AudioKnight.StarlancerAIFix";
@@ -70,7 +70,7 @@ namespace MaskFixes
                 "Bonus",
                 "Suit Whitelist",
                 VANILLA_SUITS,
-                "(Client-side) A comma-separated list of suits that natural Masked are permitted to wear. This is not case-sensitive, and will match strings from front-to-back. (Example: \"cLAss\" will find \"Classic suit\" successfully)");
+                "(Client-side) A comma-separated list of suits that natural Masked are permitted to wear. This is not case-sensitive, and will match strings from front-to-back. (Example: \"bROw\" will find \"Brown suit\" successfully)\nEntering only \"all\" instead will automatically add every suit to the list.");
 
             configTragedyChance = Config.Bind(
                 "Bonus",

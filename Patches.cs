@@ -243,7 +243,7 @@ namespace MaskFixes
             // reasons this didn't work in v49 (and presumably why it got removed):
             // - inSpecialAnimationWithPlayer was set to null before checking if it matched the local player
             // - just disabling biohazardDamage wasn't enough to transition back to a normal HUD animator state (it needs a trigger set as well)
-            if (__instance.inSpecialAnimationWithPlayer == GameNetworkManager.Instance.localPlayerController && HUDManager.Instance.HUDAnimator.GetBool("biohazardDamage"))
+            if (__instance.inSpecialAnimationWithPlayer != null && __instance.inSpecialAnimationWithPlayer == GameNetworkManager.Instance.localPlayerController && HUDManager.Instance.HUDAnimator.GetBool("biohazardDamage"))
             {
                 Plugin.Logger.LogDebug($"Mimic #{__instance.GetInstanceID()}: Vomit animation interrupted during HUD animation");
                 // cancel the particle effect early, just in case (to prevent it from retriggering and becoming stuck)

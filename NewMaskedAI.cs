@@ -6,11 +6,11 @@ namespace MaskFixes
 {
     internal class NewMaskedAI
     {
-        static LayerMask hideLayers = LayerMask.NameToLayer("Default") |
-                                      LayerMask.NameToLayer("Room") |
-                                      LayerMask.NameToLayer("Colliders") |
-                                      LayerMask.NameToLayer("PlaceableShipObject") |
-                                      LayerMask.NameToLayer("DecalStickableSurface");
+        static LayerMask hideLayers = (1 << 0)  | // Default
+                                      (1 << 8)  | // Room
+                                      (1 << 11) | // Colliders
+                                      (1 << 26) | // PlaceableShipObject
+                                      (1 << 29);  // DecalStickableSurface
 
         internal static Vector3 mainEntrancePoint, mainEntrancePointOutside;
         internal static Bounds startRoomBounds;

@@ -577,7 +577,7 @@ namespace MaskFixes
         [HarmonyPrefix]
         static bool MaskedPlayerEnemy_Pre_DoAIInterval(MaskedPlayerEnemy __instance)
         {
-            if (!Plugin.configPatchRoamingBehavior.Value)
+            if (Plugin.FORCE_DISABLE_ROAMING_PATCH || !Plugin.configPatchRoamingBehavior.Value)
                 return true;
 
             if (__instance.isEnemyDead || __instance.currentBehaviourStateIndex != 0)

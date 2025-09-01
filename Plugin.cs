@@ -12,7 +12,7 @@ namespace MaskFixes
     [BepInDependency(GUID_SMART_ENEMY_PATHFINDING, BepInDependency.DependencyFlags.SoftDependency)]
     public class Plugin : BaseUnityPlugin
     {
-        internal const string PLUGIN_GUID = "butterystancakes.lethalcompany.maskfixes", PLUGIN_NAME = "Mask Fixes", PLUGIN_VERSION = "1.5.0";
+        internal const string PLUGIN_GUID = "butterystancakes.lethalcompany.maskfixes", PLUGIN_NAME = "Mask Fixes", PLUGIN_VERSION = "1.5.1";
         internal static new ManualLogSource Logger;
 
         const string GUID_STARLANCER_AI_FIX = "AudioKnight.StarlancerAIFix";
@@ -24,7 +24,7 @@ namespace MaskFixes
         internal const string VANILLA_SUITS = "Orange suit,Green suit,Hazard suit,Pajama suit,Purple Suit,Bee Suit,Bunny Suit";
 
         const string GUID_SMART_ENEMY_PATHFINDING = "Zaggy1024.SmartEnemyPathfinding";
-        internal static bool FORCE_DISABLE_ROAMING_PATCH;
+        internal static bool INSTALLED_SMART_ENEMY_PATHFINDING, FORCE_DISABLE_ROAMING_PATCH;
 
         internal static ConfigEntry<bool> configPatchHidingBehavior, configPatchRoamingBehavior, configRandomSuits, configFixAttackConversion;
         internal static ConfigEntry<float> configTragedyChance;
@@ -48,6 +48,7 @@ namespace MaskFixes
 
             if (Chainloader.PluginInfos.ContainsKey(GUID_SMART_ENEMY_PATHFINDING))
             {
+                INSTALLED_SMART_ENEMY_PATHFINDING = true;
                 FORCE_DISABLE_ROAMING_PATCH = true;
                 Logger.LogInfo("CROSS-COMPATIBILITY - SmartEnemyPathfinding detected");
             }

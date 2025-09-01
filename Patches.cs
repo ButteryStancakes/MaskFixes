@@ -558,7 +558,8 @@ namespace MaskFixes
                 }
             }
 
-            Plugin.Logger.LogError("Mimic AI transpiler failed");
+            if (!Plugin.INSTALLED_SMART_ENEMY_PATHFINDING)
+                Plugin.Logger.LogError("Mimic AI transpiler failed");
             return instructions;
         }
 

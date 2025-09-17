@@ -225,7 +225,7 @@ namespace MaskFixes
             if (__instance.maskFloodParticle.isEmitting && __instance.inSpecialAnimationWithPlayer != null)
             {
                 // enables the blood spillage effect that Zeekerss removed in v49
-                if (__instance.inSpecialAnimationWithPlayer == GameNetworkManager.Instance.localPlayerController && !HUDManager.Instance.HUDAnimator.GetBool("biohazardDamage"))
+                if (__instance.inSpecialAnimationWithPlayer == GameNetworkManager.Instance.localPlayerController && !GameNetworkManager.Instance.localPlayerController.isPlayerDead && !HUDManager.Instance.HUDAnimator.GetBool("biohazardDamage"))
                 {
                     Plugin.Logger.LogDebug($"Mimic #{__instance.GetInstanceID()}: Vomiting blood on local player, do HUD animation");
                     HUDManager.Instance.HUDAnimator.SetBool("biohazardDamage", true);

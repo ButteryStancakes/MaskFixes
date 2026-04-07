@@ -1,13 +1,12 @@
 ﻿using GameNetcodeStuff;
 using UnityEngine;
-using System.Linq;
 
 namespace MaskFixes
 {
-    internal class NewMaskedAI
+    internal static class NewMaskedAI
     {
-        static LayerMask hideLayers = (1 << 0)  | // Default
-                                      (1 << 8)  | // Room
+        static LayerMask hideLayers = (1 << 0) | // Default
+                                      (1 << 8) | // Room
                                       (1 << 11) | // Colliders
                                       (1 << 26) | // PlaceableShipObject
                                       (1 << 29);  // DecalStickableSurface
@@ -74,7 +73,7 @@ namespace MaskFixes
             // get the closest players inside and outside the building
             PlayerControllerB closestInsidePlayer = null, closestOutsidePlayer = null;
             float inDist = float.MaxValue, outDist = float.MaxValue;
-            for (int i = 0; i < StartOfRound.Instance.allPlayerScripts.Length; i ++)
+            for (int i = 0; i < StartOfRound.Instance.allPlayerScripts.Length; i++)
             {
                 if (StartOfRound.Instance.allPlayerScripts[i] == null || StartOfRound.Instance.allPlayerScripts[i].isPlayerDead || !StartOfRound.Instance.allPlayerScripts[i].isPlayerControlled)
                     continue;

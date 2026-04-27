@@ -700,11 +700,11 @@ namespace MaskFixes
 
             MethodInfo killPlayer = AccessTools.Method(typeof(PlayerControllerB), nameof(PlayerControllerB.KillPlayer));
             MethodInfo zero = AccessTools.DeclaredPropertyGetter(typeof(Vector3), nameof(Vector3.zero));
-            for (int i = 7; i < codes.Count; i++)
+            for (int i = 8; i < codes.Count; i++)
             {
                 if (codes[i].opcode == OpCodes.Callvirt && (MethodInfo)codes[i].operand == killPlayer && codes[i - 8].opcode == OpCodes.Call && (MethodInfo)codes[i - 8].operand == zero && codes[i - 7].opcode == OpCodes.Ldc_I4_0)
                 {
-                    codes[i - 6].opcode = OpCodes.Ldc_I4_1;
+                    codes[i - 7].opcode = OpCodes.Ldc_I4_1;
                     Plugin.Logger.LogDebug("Transpiler (Mimic kill): Spawn body");
                     return codes;
                 }

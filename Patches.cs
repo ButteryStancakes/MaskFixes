@@ -273,6 +273,17 @@ namespace MaskFixes
                 Plugin.Logger.LogDebug($"Mimic #{__instance.GetInstanceID()}: Mask becomes silent");
                 randomPeriodicAudioPlayer.enabled = false;
             }
+            ScanNodeProperties scanNodeProperties = __instance.animationContainer.GetComponentInChildren<ScanNodeProperties>();
+            if (scanNodeProperties != null)
+            {
+                scanNodeProperties.minRange = 2;
+                scanNodeProperties.maxRange = 10;
+
+                if (__instance.mimickingPlayer != null || !Plugin.configOnlyScanPlayers.Value)
+                    scanNodeProperties.GetComponent<Collider>().enabled = true;
+
+                Plugin.Logger.LogDebug($"Mimic #{__instance.GetInstanceID()}: Update scan node");
+            }
         }
 
         [HarmonyPatch(nameof(MaskedPlayerEnemy.SetSuit))]
@@ -336,6 +347,17 @@ namespace MaskFixes
         {
             if (__instance.mimickingPlayer == null || __instance.timeSinceSpawn > 40f)
                 return;
+
+            ScanNodeProperties scanNodeProperties = __instance.animationContainer.GetComponentInChildren<ScanNodeProperties>();
+            if (scanNodeProperties != null)
+            {
+                scanNodeProperties.headerText = $"Body of {__instance.mimickingPlayer.playerUsername}";
+                scanNodeProperties.subText = $"Cause of death: {__instance.mimickingPlayer.causeOfDeath}";
+                if (Plugin.configScanNodes.Value != ScanNodeVisibility.OnlyDead)
+                    scanNodeProperties.GetComponent<Collider>().enabled = true;
+
+                Plugin.Logger.LogDebug($"Mimic #{__instance.GetInstanceID()}: Update scan node");
+            }
 
             if (__instance.maskTypes == null || __instance.maskTypes.Length < 2)
             {
@@ -440,26 +462,68 @@ namespace MaskFixes
                     trans.tag = "Untagged";
             }
 
-            // randomize
-            if (__instance.mimickingPlayer == null && Time.realtimeSinceStartup - safeTimer > 10f)
+            ScanNodeProperties scanNodeProperties = null;
+            if (Plugin.configScanNodes.Value != ScanNodeVisibility.Never)
             {
-                if (Plugin.configRandomSuits.Value)
+                scanNodeProperties = new GameObject("ScanNode").AddComponent<ScanNodeProperties>();
+                scanNodeProperties.transform.SetParent(__instance.animationContainer.transform.Find("metarig/spine"));
+                scanNodeProperties.transform.SetLocalPositionAndRotation(new(0f, 0.455329835f, -0.0427957475f), Quaternion.Euler(-19.742f, 0f, 0f));
+                scanNodeProperties.transform.localScale = new(0.563019395f, 0.563019335f, 0.563019395f);
+
+                scanNodeProperties.minRange = 1;
+                scanNodeProperties.maxRange = 6;
+
+                scanNodeProperties.nodeType = 1;
+
+                scanNodeProperties.gameObject.layer = 22;
+                Collider collider = scanNodeProperties.gameObject.AddComponent<BoxCollider>();
+                if (Plugin.configScanNodes.Value == ScanNodeVisibility.OnlyDead)
+                    collider.enabled = false;
+
+                scanNodeProperties.gameObject.AddComponent<Rigidbody>().isKinematic = true;
+
+                Plugin.Logger.LogDebug($"Mimic #{__instance.GetInstanceID()}: Create scan node");
+            }
+
+            // randomize
+            if (__instance.mimickingPlayer == null)
+            {
+                if (Time.realtimeSinceStartup - safeTimer > 10f)
                 {
-                    int randSuit = suitIndices[new System.Random(StartOfRound.Instance.randomMapSeed + (int)__instance.NetworkObjectId).Next(suitIndices.Count)];
-                    if (randSuit != 0)
+                    if (Plugin.configRandomSuits.Value)
                     {
-                        __instance.SetSuit(randSuit);
-                        Plugin.Logger.LogDebug($"Mimic #{__instance.GetInstanceID()}: Equip \"{StartOfRound.Instance.unlockablesList.unlockables[randSuit].unlockableName}\"");
+                        int randSuit = suitIndices[new System.Random(StartOfRound.Instance.randomMapSeed + (int)__instance.NetworkObjectId).Next(suitIndices.Count)];
+                        if (randSuit != 0)
+                        {
+                            __instance.SetSuit(randSuit);
+                            Plugin.Logger.LogDebug($"Mimic #{__instance.GetInstanceID()}: Equip \"{StartOfRound.Instance.unlockablesList.unlockables[randSuit].unlockableName}\"");
+                        }
+                    }
+                    else if (StartOfRound.Instance.isChallengeFile)
+                        __instance.SetSuit(PURPLE_SUIT_ID);
+
+                    if (Plugin.configTragedyChance.Value > 0f)
+                    {
+                        if (Plugin.configTragedyChance.Value >= 1f || new System.Random(StartOfRound.Instance.randomMapSeed * (int)__instance.NetworkObjectId).NextDouble() < Plugin.configTragedyChance.Value)
+                            __instance.SetMaskType(5);
                     }
                 }
-                else if (StartOfRound.Instance.isChallengeFile)
-                    __instance.SetSuit(PURPLE_SUIT_ID);
 
-                if (Plugin.configTragedyChance.Value > 0f)
+                if (scanNodeProperties != null)
                 {
-                    if (Plugin.configTragedyChance.Value >= 1f || new System.Random(StartOfRound.Instance.randomMapSeed * (int)__instance.NetworkObjectId).NextDouble() < Plugin.configTragedyChance.Value)
-                        __instance.SetMaskType(5);
+                    if (Plugin.configOnlyScanPlayers.Value)
+                        scanNodeProperties.GetComponent<Collider>().enabled = false;
+                    else
+                    {
+                        scanNodeProperties.headerText = "Body of ???";
+                        scanNodeProperties.subText = $"Cause of death: {(new System.Random(StartOfRound.Instance.randomMapSeed - (int)__instance.NetworkObjectId).NextDouble() < 0.5 ? "Strangulation" : "Suffocation")}";
+                    }
                 }
+            }
+            else if (scanNodeProperties != null)
+            {
+                scanNodeProperties.headerText = $"Body of {__instance.mimickingPlayer.playerUsername}";
+                scanNodeProperties.subText = $"Cause of death: {__instance.mimickingPlayer.causeOfDeath}";
             }
         }
 

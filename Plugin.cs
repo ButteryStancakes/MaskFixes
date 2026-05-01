@@ -6,13 +6,20 @@ using HarmonyLib;
 
 namespace MaskFixes
 {
+    internal enum ScanNodeVisibility
+    {
+        Never = -1,
+        Always,
+        OnlyDead
+    }
+
     [BepInPlugin(PLUGIN_GUID, PLUGIN_NAME, PLUGIN_VERSION)]
     [BepInDependency(GUID_STARLANCER_AI_FIX, BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency(GUID_LOBBY_COMPATIBILITY, BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency(GUID_SMART_ENEMY_PATHFINDING, BepInDependency.DependencyFlags.SoftDependency)]
     public class Plugin : BaseUnityPlugin
     {
-        internal const string PLUGIN_GUID = "butterystancakes.lethalcompany.maskfixes", PLUGIN_NAME = "Mask Fixes", PLUGIN_VERSION = "1.6.1";
+        internal const string PLUGIN_GUID = "butterystancakes.lethalcompany.maskfixes", PLUGIN_NAME = "Mask Fixes", PLUGIN_VERSION = "1.6.2";
         internal static new ManualLogSource Logger;
 
         const string GUID_STARLANCER_AI_FIX = "AudioKnight.StarlancerAIFix";
@@ -26,9 +33,10 @@ namespace MaskFixes
         const string GUID_SMART_ENEMY_PATHFINDING = "Zaggy1024.SmartEnemyPathfinding";
         internal static bool INSTALLED_SMART_ENEMY_PATHFINDING, FORCE_DISABLE_ROAMING_PATCH;
 
-        internal static ConfigEntry<bool> configPatchHidingBehavior, configPatchRoamingBehavior, configRandomSuits, configFixAttackConversion;
+        internal static ConfigEntry<bool> configPatchHidingBehavior, configPatchRoamingBehavior, configRandomSuits, configFixAttackConversion, configOnlyScanPlayers;
         internal static ConfigEntry<float> configTragedyChance;
         internal static ConfigEntry<string> configSuitWhitelist;
+        internal static ConfigEntry<ScanNodeVisibility> configScanNodes;
 
         void Awake()
         {
@@ -70,6 +78,18 @@ namespace MaskFixes
                 "Fix Attack Conversion",
                 true,
                 "(Client-side, requires restart) When you are killed by a Masked, this will fix your mimic's appearance not synchronizing for anybody except the host. As a side effect this will also make you drop your items when converted.");
+
+            configScanNodes = Config.Bind(
+                "Bonus",
+                "Scan Nodes",
+                ScanNodeVisibility.Never,
+                "(Client-side) When should Masked display a \"Body of\" scan node?");
+
+            configOnlyScanPlayers = Config.Bind(
+                "Bonus",
+                "Only Scan Players",
+                true,
+                "(Client-side) Whether \"Body of\" scan nodes should display for converted players only, or display for natural Masked as well.");
 
             configRandomSuits = Config.Bind(
                 "Bonus",
